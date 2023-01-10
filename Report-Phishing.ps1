@@ -165,8 +165,6 @@ function Send-EmailsToCISA {
         catch {
             Write-Error $_
         }
-
-        $i++
     }
 }
 
