@@ -9,25 +9,46 @@ param (
     
     [Parameter(Mandatory)]
     [MailAddress]
-    $ReceipientUPN
+    $ReceipientUPN,
+
+    [Parameter(ParameterSetName = "AppAuth")]
+    [guid]
+    $AppId,
+
+    [Parameter(ParameterSetName = "AppAuth")]
+    [string]
+    $CertificateThumb,
+
+    [Parameter(ParameterSetName = "AppAuth")]
+    [string]
+    $EXOOrganization
 )
+
+$LogFileName = "log-ReportedPhishing-" + $DateToReport.ToString("yyyy-MM-dd")
+$LogFilePath = Join-Path -Path $PSScriptRoot -ChildPath $LogFileName
 
 #################
 #DRAFT DO NOT USE
-
-# TODO: App auth 
 #################
 
 function Connect-Microsoft365 {
     
     if ( -not (Get-PSSession | Where-Object {$_.ComputerName -eq "outlook.office365.com" -and $_.State -eq "Opened" -and $_.Availability -eq "Available"}) ) {
-        
-        Connect-ExchangeOnline -UseRPSSession -UserPrincipalName $SenderUPN        
+        if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
+            Connect-ExchangeOnline -UseRPSSession -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
+        }
+        else {
+            Connect-ExchangeOnline -UseRPSSession -UserPrincipalName $SenderUPN        
+        }
     }
 
     if ("Mail.Send" -notin (Get-MgContext).Scopes) {
-        
-        Connect-MgGraph -Scopes Mail.Send | Out-Null
+        if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
+            Connect-MgGraph -TenantId $EXOOrganization -CertificateThumbprint $CertificateThumb -ClientId $AppId | Out-Null
+        }
+        else {
+            Connect-MgGraph -Scopes Mail.Send | Out-Null
+        }
     }
 }
 
@@ -93,8 +114,8 @@ function Get-UnreportedMessages {
         
     }
 
-    if (Test-Path -Path $DateToReport.ToString("yyyy-MM-dd")) {
-        $DaysReportedMessages = Get-Content -Path $DateToReport.ToString("yyyy-MM-dd")
+    if (Test-Path -Path $LogFilePath) {
+        $DaysReportedMessages = Get-Content -Path $LogFilePath
     }
     $DaysUnreportedMessages = @()
 
@@ -152,7 +173,7 @@ function Send-EmailsToCISA {
         try {
             Send-MgUserMail -UserId $SenderUPN -BodyParameter $params
 
-            $Message.Identity | Out-File -FilePath $DateToReport.ToString("yyyy-MM-dd") -Append
+            $Message.Identity | Out-File -FilePath $LogFilePath -Append
 
             $Status = "Sent " + $i + " of " + $QurantineMessagesToReport.Count
             Write-Host $Status
