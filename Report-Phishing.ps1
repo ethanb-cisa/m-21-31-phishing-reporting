@@ -1,5 +1,4 @@
-param (
-    [Parameter(Mandatory)]    
+param (    
     [DateTime]
     $DateToReport = (Get-Date),
 
@@ -9,7 +8,7 @@ param (
     
     [Parameter(Mandatory)]
     [MailAddress]
-    $ReceipientUPN,
+    $RecipientUPN,
 
     [Parameter(ParameterSetName = "AppAuth")]
     [guid]
@@ -72,6 +71,7 @@ function Get-UnreportedMessages {
             -Type Phish `
             -Direction Inbound `
             -Reported $false `
+            -Released $false `
             -PageSize 1000 `
             -Page $PageCount `
         | % { $DaysQuarantineMessages += $_}
@@ -82,6 +82,7 @@ function Get-UnreportedMessages {
             -Type HighConfPhish `
             -Direction Inbound `
             -Reported $false `
+            -Released $false `
             -PageSize 1000 `
             -Page $PageCount `
         | % { $DaysQuarantineMessages += $_}
@@ -94,6 +95,7 @@ function Get-UnreportedMessages {
             -Type Phish `
             -Direction Inbound `
             -Reported $false `
+            -Released $false `
             -PageSize 1000 `
             -Page ($PageCount+1)) `
         -or `
@@ -103,6 +105,7 @@ function Get-UnreportedMessages {
             -Type HighConfPhish `
             -Direction Inbound `
             -Reported $false `
+            -Released $false `
             -PageSize 1000 `
             -Page ($PageCount+1))
         ) {
@@ -145,12 +148,12 @@ function Send-EmailsToCISA {
                     Subject = "Federal phishing email submission"
                     Body = @{
                         ContentType = "Text"
-                        Content = "Phishing email reported as attachment per M-21-31."
+                        Content = "Phishing email reported as attachment per M-21-31. Sent via CISA's script."
                     }
                     ToRecipients = @(
                         @{
                             EmailAddress = @{
-                                Address = $ReceipientUPN
+                                Address = $RecipientUPN
                             }
                         }
                     )
