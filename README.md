@@ -7,7 +7,7 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 ## Features:
 - Downloads ***quarantined*** emails marked as `Phishing` or `High Confidence Phishing` from EOP and sends them to CISA's federal phishing reporting mailbox. Emails released from quarantine are not sent.
 - Supports user and app-based execution methods.
-- Tracks emails sent emails to ensure submissions are not duplicated.
+- Tracks sent emails to ensure submissions are not duplicated.
 - Rate limiting to stay under Exchange Online's [sending limits](https://learn.microsoft.com/en-us/office365/servicedescriptions/exchange-online-service-description/exchange-online-limits#receiving-and-sending-limits). This is ~28,000 submissions/day capacity.
 - Allows users to specify the day to search.
 
@@ -18,11 +18,11 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 - Module: ExchangeOnlineManagement
 - Module: Microsoft.Graph.Users.Actions
 - [WinRM basic auth](https://learn.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps#turn-on-basic-authentication-in-winrm) enabled on the executing endpoint. This is to download the messages from EXO via remote PowerShell.
-- Microsoft commercial and GCC support. (GCC-High/DOD are not supported.)
+- Microsoft commercial and GCC are supported. (GCC-High/DOD are not supported.)
 
 ### User Permissions
 
-The user needs `Security Admin` or higher and must have an Exchange mailbox.
+The user needs `Security Admin` or higher to download the emails and must have an Exchange mailbox to send the emails.
 
 The script will authenticate and send emails as the user specified in `SenderUPN`.
 
@@ -36,6 +36,8 @@ Azure AD Roles:
 - `Security Admin` or higher
 
 The script will send emails to CISA as the user specified in `SenderUPN`.
+
+To run the script unattended you need to create and permission an application in AAD. See [App-only authentication for unattended scripts in Exchange Online PowerShell and Security & Compliance PowerShell](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps) for instructions.
 
 > **Warning**
 > An application with the `Mail.Send` application permission can send mail as ***any*** user. You should treat the application as highly privileged. Additionally, you can limit the mailboxes the app can access via [Application Access Policies](https://learn.microsoft.com/en-us/graph/auth-limit-mailbox-access). 
@@ -131,8 +133,3 @@ The email address the phishing email will be sent from. With user authentication
 | Mandatory     | Yes         |
 | Default Value | None        |
 | ParameterSet  | All         |
-
-
-## Configuring application authentication
-
-To run the script unattended you need to create and permission an application in AAD. See [App-only authentication for unattended scripts in Exchange Online PowerShell and Security & Compliance PowerShell](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps) for instructions.
