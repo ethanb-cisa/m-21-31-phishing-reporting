@@ -71,7 +71,7 @@ function Get-UnreportedMessages {
             -Type Phish `
             -Direction Inbound `
             -Reported $false `
-            -Released $false `
+            -ReleaseStatus "NotReleased" `
             -PageSize 1000 `
             -Page $PageCount `
         | % { $DaysQuarantineMessages += $_}
@@ -82,7 +82,7 @@ function Get-UnreportedMessages {
             -Type HighConfPhish `
             -Direction Inbound `
             -Reported $false `
-            -Released $false `
+            -ReleaseStatus "NotReleased" `
             -PageSize 1000 `
             -Page $PageCount `
         | % { $DaysQuarantineMessages += $_}
@@ -95,7 +95,7 @@ function Get-UnreportedMessages {
             -Type Phish `
             -Direction Inbound `
             -Reported $false `
-            -Released $false `
+            -ReleaseStatus "NotReleased" `
             -PageSize 1000 `
             -Page ($PageCount+1)) `
         -or `
@@ -105,7 +105,7 @@ function Get-UnreportedMessages {
             -Type HighConfPhish `
             -Direction Inbound `
             -Reported $false `
-            -Released $false `
+            -ReleaseStatus "NotReleased" `
             -PageSize 1000 `
             -Page ($PageCount+1))
         ) {
