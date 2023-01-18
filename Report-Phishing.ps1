@@ -174,7 +174,7 @@ function Send-EmailsToCISA {
         }
 
         try {
-            Send-MgUserMail -UserId $SenderUPN -BodyParameter $params
+            Send-MgUserMail -UserId $SenderUPN -BodyParameter $params -ErrorAction Stop
 
             $Message.Identity | Out-File -FilePath $LogFilePath -Append
 
