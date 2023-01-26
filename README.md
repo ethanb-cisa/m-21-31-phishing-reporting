@@ -36,9 +36,6 @@ The executing application needs:
 - Application permission `Exchange.ManageAsApp` in Office 365 Exchange Online
 - Application permission `Mail.Send` in Microsoft Graph
 
-The Microsoft Graph PowerShell application needs:
-- Delegated permission `Mail.Send` in Microsoft Graph
-
 In this method, the script sends emails as the user specified in `SenderUPN`. The application is used for authentication.
 
 To run the script unattended you need to create and permission an application in AAD. See [App-only authentication for unattended scripts in Exchange Online PowerShell and Security & Compliance PowerShell](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps) for instructions.
