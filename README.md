@@ -15,26 +15,30 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 ## Requirements
 
 - PowerShell v5.1 or higher (PowerShell 7 might work)
-- Module: ExchangeOnlineManagement
-- Module: Microsoft.Graph.Users.Actions
+- Module: `ExchangeOnlineManagement` 3.0.0 or higher
+- Module: `Microsoft.Graph.Users.Actions`
 - Microsoft commercial and GCC are supported. (GCC-High/DOD are not supported.)
 
-### User Permissions
+### User-based execution permissions
 
-The user needs `Security Admin` or higher to download the emails and must have an Exchange mailbox to send the emails.
+The user needs:
+- `Security Admin` or higher to download the emails
+- An Exchange mailbox to send the emails.
 
-The script will authenticate and send emails as the user specified in `SenderUPN`.
+The Microsoft Graph PowerShell application needs:
+- Delegated permission `Mail.Send` in Microsoft Graph
 
-### App Permissions
+In this method, the script authenticates and send emails as the user specified in `SenderUPN`.
 
-Scopes:
+### Application-based execution permissions
+
+The executing application needs:
 - `Exchange.ManageAsApp` in Office 365 Exchange Online
-- `Mail.Send` in Microsoft Graph
 
-Azure AD Roles:
-- `Security Admin` or higher
+The Microsoft Graph PowerShell application needs:
+- Delegated permission `Mail.Send` in Microsoft Graph
 
-The script will send emails to CISA as the user specified in `SenderUPN`.
+In this method, the script sends emails as the user specified in `SenderUPN`. The application is used for authentication.
 
 To run the script unattended you need to create and permission an application in AAD. See [App-only authentication for unattended scripts in Exchange Online PowerShell and Security & Compliance PowerShell](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps) for instructions.
 
