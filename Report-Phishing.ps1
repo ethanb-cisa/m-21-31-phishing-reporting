@@ -34,10 +34,10 @@ function Connect-Microsoft365 {
     
     if ( -not (Get-PSSession | Where-Object {$_.ComputerName -eq "outlook.office365.com" -and $_.State -eq "Opened" -and $_.Availability -eq "Available"}) ) {
         if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
-            Connect-ExchangeOnline -UseRPSSession -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
+            Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
         }
         else {
-            Connect-ExchangeOnline -UseRPSSession -UserPrincipalName $SenderUPN        
+            Connect-ExchangeOnline -UserPrincipalName $SenderUPN        
         }
     }
 
