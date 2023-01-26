@@ -34,6 +34,7 @@ In this method, the script authenticates and send emails as the user specified i
 
 The executing application needs:
 - `Exchange.ManageAsApp` in Office 365 Exchange Online
+- Application permission `Mail.Send` in Microsoft Graph
 
 The Microsoft Graph PowerShell application needs:
 - Delegated permission `Mail.Send` in Microsoft Graph
