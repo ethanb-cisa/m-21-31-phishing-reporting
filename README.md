@@ -17,7 +17,6 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 - PowerShell v5.1 or higher (PowerShell 7 might work)
 - Module: ExchangeOnlineManagement
 - Module: Microsoft.Graph.Users.Actions
-- [WinRM basic auth](https://learn.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps#turn-on-basic-authentication-in-winrm) enabled on the executing endpoint. This is to download the messages from EXO via remote PowerShell.
 - Microsoft commercial and GCC are supported. (GCC-High/DOD are not supported.)
 
 ### User Permissions
