@@ -23,8 +23,12 @@ param (
     $EXOOrganization
 )
 
+$Version = "0.1.0"
+
 $LogFileName = "log-ReportedPhishing-" + $DateToReport.ToString("yyyy-MM-dd")
-$LogFilePath = Join-Path -Path $PSScriptRoot -ChildPath $LogFileName
+$LogFilePathPart = Join-Path -path $PSScriptRoot -ChildPath "logs" 
+$LogFilePath = Join-Path -Path $LogFilePathPart -ChildPath $LogFileName
+
 
 #################
 #DRAFT DO NOT USE
@@ -32,7 +36,7 @@ $LogFilePath = Join-Path -Path $PSScriptRoot -ChildPath $LogFileName
 
 function Connect-Microsoft365 {
     
-    if ( -not (Get-PSSession | Where-Object {$_.ComputerName -eq "outlook.office365.com" -and $_.State -eq "Opened" -and $_.Availability -eq "Available"}) ) {
+    if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.State -eq "Connected" -and $_.TokenStatus -eq "Active"}) ) {
         if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
             Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
         }
@@ -42,9 +46,9 @@ function Connect-Microsoft365 {
     }
 
     if ("Mail.Send" -notin (Get-MgContext).Scopes) {
-        if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
+       if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
             Connect-MgGraph -TenantId $EXOOrganization -CertificateThumbprint $CertificateThumb -ClientId $AppId | Out-Null
-        }
+       }
         else {
             Connect-MgGraph -Scopes Mail.Send | Out-Null
         }
@@ -131,6 +135,25 @@ function Get-UnreportedMessages {
     return $DaysUnreportedMessages
 }
 
+function ConvertTo-EncryptedZip {
+    param (
+        $Message
+    )
+
+    $FullMessage = Export-QuarantineMessage -Identity $Message.Identity
+    $B64DecodedEML = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($FullMessage.eml))
+
+    $ZipFilePath = $PSScriptRoot + "\encrypted_zips\" + $Message.Identity.Replace("\","_") + ".zip" 
+    $7zipParams = @("a", "-si", $ZipFilePath, "-tzip", "-pCISA-PHISHING-REPORT" )
+    $B64DecodedEML | & $PSScriptRoot\7za.exe $7zipParams | Out-Null
+
+    $B64EncryptedZip = [Convert]::ToBase64String((Get-Content $ZipFilePath -Encoding Byte))
+
+    return @{"Base64Data" = $B64EncryptedZip; 
+             "FilePath" = (Get-ChildItem -Path $ZipFilePath)
+            }
+}
+
 function Send-EmailsToCISA {
     param (
         [PSObject[]]
@@ -141,14 +164,15 @@ function Send-EmailsToCISA {
     ForEach ($Message in $QurantineMessagesToReport) {
         
         try {
-            $FullMessage = Export-QuarantineMessage -Identity $Message.Identity
+
+            $Zip = ConvertTo-EncryptedZip -Message $Message
 
             $params = @{
                 Message = @{
-                    Subject = "Federal phishing email submission"
+                    Subject = "M-21-31 Federal phishing email submission"
                     Body = @{
                         ContentType = "Text"
-                        Content = "Phishing email reported as attachment per M-21-31. Sent via CISA's script."
+                        Content = "This phishing email is reported as required by M-21-31. This zip is encrypted with the password from CISA's M-21-31 phishing reporting script (version $Version)."
                     }
                     ToRecipients = @(
                         @{
@@ -160,9 +184,9 @@ function Send-EmailsToCISA {
                     Attachments = @(
                         @{
                             "@odata.type" = "#microsoft.graph.fileAttachment"
-                            Name = $Message.Subject + ".eml"
+                            Name = $Message.Subject + ".zip"
                             ContentType = "text/plain"
-                            ContentBytes = $FullMessage.eml
+                            ContentBytes = $Zip.Base64Data
                         }
                     )
                 }
@@ -175,6 +199,8 @@ function Send-EmailsToCISA {
 
         try {
             Send-MgUserMail -UserId $SenderUPN -BodyParameter $params -ErrorAction Stop
+            
+            Remove-Item -Path $Zip.FilePath.PSPath 
 
             $Message.Identity | Out-File -FilePath $LogFilePath -Append
 
@@ -189,6 +215,8 @@ function Send-EmailsToCISA {
         catch {
             Write-Error $_
         }
+
+        
     }
 }
 
