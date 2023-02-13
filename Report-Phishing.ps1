@@ -36,7 +36,7 @@ $LogFilePath = Join-Path -Path $LogFilePathPart -ChildPath $LogFileName
 
 function Connect-Microsoft365 {
     
-    if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.State -eq "Connected" -and $_.TokenStatus -eq "Active"}) ) {
+    if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.TokenStatus -eq "Active"}) ) {
         if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
             Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
         }
