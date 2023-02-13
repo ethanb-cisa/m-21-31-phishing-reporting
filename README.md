@@ -6,6 +6,7 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 
 ## Features:
 - Downloads ***quarantined*** emails marked as `Phishing` or `High Confidence Phishing` from EOP and sends them to CISA's federal phishing reporting mailbox. Emails released from quarantine are not sent.
+- Encrypts quarantined emails into a zip archive (using 7zip command line tool)
 - Supports user and app-based execution methods.
 - Tracks sent emails to ensure submissions are not duplicated.
 - Rate limiting to stay under Exchange Online's [sending limits](https://learn.microsoft.com/en-us/office365/servicedescriptions/exchange-online-service-description/exchange-online-limits#receiving-and-sending-limits). This is ~28,000 submissions/day capacity.
@@ -18,6 +19,7 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 - Module: `ExchangeOnlineManagement` 3.0.0 or higher
 - Module: `Microsoft.Graph.Users.Actions`
 - Microsoft commercial and GCC are supported. (GCC-High/DOD are not supported.)
+- The ability to send encrypted zip files ***outbound***. (Some Data Loss Prevention/email security appliances block this functionality.)
 
 ### User-based execution permissions
 
