@@ -10,17 +10,23 @@ param (
     [MailAddress]
     $RecipientUPN,
 
-    [Parameter(ParameterSetName = "AppAuth")]
+    [Parameter(ParameterSetName = "AppAuthCert")]
+    [Parameter(ParameterSetName = "AppAuthSecret")]
     [guid]
     $AppId,
 
-    [Parameter(ParameterSetName = "AppAuth")]
+    [Parameter(ParameterSetName = "AppAuthCert")]
     [string]
     $CertificateThumb,
 
-    [Parameter(ParameterSetName = "AppAuth")]
+    [Parameter(ParameterSetName = "AppAuthCert")]
+    [Parameter(ParameterSetName = "AppAuthSecret")]
     [string]
-    $EXOOrganization
+    $EXOOrganization,
+
+    [Parameter(ParameterSetName = "AppAuthSecret")]
+    [string]
+    $ClientSecret
 )
 
 $Version = "0.1.0"
@@ -37,8 +43,25 @@ $LogFilePath = Join-Path -Path $LogFilePathPart -ChildPath $LogFileName
 function Connect-Microsoft365 {
     
     if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.TokenStatus -eq "Active"}) ) {
-        if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
+        if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
             Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
+        }
+        elseif ($PSCmdlet.ParameterSetName -eq "AppAuthSecret") {
+            $URL = "https://login.microsoftonline.com/$EXOOrganization/oauth2/v2.0/token"
+
+            $Body = "grant_type=client_credentials& `
+                    client_id=$AppId& `
+                    client_secret=$ClientSecret& `
+                    scope=https%3A%2F%2Foutlook.office365.com%2F.default"
+
+            $Headers = @{
+                "Content-Type" = "application/x-www-form-urlencoded"
+            }
+
+            $EXOToken= (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json).access_token
+
+            Connect-ExchangeOnline -AccessToken $EXOToken -Organization $EXOOrganization
+
         }
         else {
             Connect-ExchangeOnline -UserPrincipalName $SenderUPN        
@@ -46,8 +69,25 @@ function Connect-Microsoft365 {
     }
 
     if ("Mail.Send" -notin (Get-MgContext).Scopes) {
-       if ($PSCmdlet.ParameterSetName -eq "AppAuth") {
+       if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
             Connect-MgGraph -TenantId $EXOOrganization -CertificateThumbprint $CertificateThumb -ClientId $AppId | Out-Null
+       }
+       elseif ($PSCmdlet.ParameterSetName -eq "AppAuthSecret") {
+
+            $URL = "https://login.microsoftonline.com/$EXOOrganization/oauth2/v2.0/token"
+
+            $Body = "grant_type=client_credentials& `
+                     client_id=$AppId& `
+                     client_secret=$ClientSecret& `
+                     scope=https%3A%2F%2Fgraph.microsoft.com%2F.default"
+
+            $Headers = @{
+                "Content-Type" = "application/x-www-form-urlencoded"
+            }
+
+            $GraphToken = (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json).access_token
+
+            Connect-MgGraph -AccessToken $GraphToken
        }
         else {
             Connect-MgGraph -Scopes Mail.Send | Out-Null

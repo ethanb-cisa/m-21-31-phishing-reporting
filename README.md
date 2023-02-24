@@ -81,7 +81,7 @@ The Azure Active Directory (AAD) client ID (sometimes called Application ID) to 
 | Type          | GUID    |
 | Mandatory     | No      |
 | Default Value | None    |
-| ParameterSet  | AppAuth |
+| ParameterSet  | AppAuthCert and AppAuthSecret |
 
 ### ***-CertificateThumb***
 
@@ -92,7 +92,17 @@ The certificate thumprint associated with the AAD application specified in `AppI
 | Type          | String  |
 | Mandatory     | No      |
 | Default Value | None    |
-| ParameterSet  | AppAuth |
+| ParameterSet  | AppAuthCert |
+
+### ***-ClientSecret***
+
+The client application's, specified in `AppId`, secret key. 
+|           |     |
+|---------------|---------|
+| Type          | String  |
+| Mandatory     | No      |
+| Default Value | None    |
+| ParameterSet  | AppAuthSecret|
 
 ### ***-DateToReport***
 
@@ -114,7 +124,7 @@ One of the domains associated with the agency's tenant. For example: `usdhs.onmi
 | Type          | String  |
 | Mandatory     | No      |
 | Default Value | None    |
-| ParameterSet  | AppAuth |
+| ParameterSet  | AppAuthCert and AppAuthSecret |
 
 ### ***-RecipientUPN***
 
