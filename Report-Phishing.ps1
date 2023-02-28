@@ -2,29 +2,29 @@ param (
     [DateTime]
     $DateToReport = (Get-Date),
 
-    [Parameter(Mandatory)] 
+    [Parameter(Mandatory = $true)] 
     [MailAddress]
     $SenderUPN,
     
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory = $true)]
     [MailAddress]
     $RecipientUPN,
 
-    [Parameter(ParameterSetName = "AppAuthCert")]
-    [Parameter(ParameterSetName = "AppAuthSecret")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")]
     [guid]
     $AppId,
 
-    [Parameter(ParameterSetName = "AppAuthCert")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
     [string]
     $CertificateThumb,
 
-    [Parameter(ParameterSetName = "AppAuthCert")]
-    [Parameter(ParameterSetName = "AppAuthSecret")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")]
     [string]
     $EXOOrganization,
 
-    [Parameter(ParameterSetName = "AppAuthSecret")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")]
     [string]
     $ClientSecret
 )
@@ -34,7 +34,8 @@ $Version = "0.1.0"
 $LogFileName = "log-ReportedPhishing-" + $DateToReport.ToString("yyyy-MM-dd")
 $LogFilePathPart = Join-Path -path $PSScriptRoot -ChildPath "logs" 
 $LogFilePath = Join-Path -Path $LogFilePathPart -ChildPath $LogFileName
-
+$Script:EXOTokenExpirationTime = ""
+$Script:GraphTokenExpirationTime = ""
 
 #################
 #DRAFT DO NOT USE
@@ -58,10 +59,11 @@ function Connect-Microsoft365 {
                 "Content-Type" = "application/x-www-form-urlencoded"
             }
 
-            $EXOToken= (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json).access_token
+            $EXOToken= (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
 
-            Connect-ExchangeOnline -AccessToken $EXOToken -Organization $EXOOrganization
+            Connect-ExchangeOnline -AccessToken $EXOToken.access_token -Organization $EXOOrganization
 
+            $Script:EXOTokenExpirationTime = (Get-Date).AddSeconds($EXOToken.expires_in)
         }
         else {
             Connect-ExchangeOnline -UserPrincipalName $SenderUPN        
@@ -85,10 +87,13 @@ function Connect-Microsoft365 {
                 "Content-Type" = "application/x-www-form-urlencoded"
             }
 
-            $GraphToken = (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json).access_token
+            $GraphToken = (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
 
-            Connect-MgGraph -AccessToken $GraphToken
-       }
+            Connect-MgGraph -AccessToken $GraphToken.access_token
+
+            $Script:GraphTokenExpirationTime = (Get-Date).AddSeconds($GraphToken.expires_in)
+
+        }
         else {
             Connect-MgGraph -Scopes Mail.Send | Out-Null
         }
@@ -102,7 +107,6 @@ function Get-UnreportedMessages {
         [DateTime]
         $DateToReport
     )
-
 
     $DaysQuarantineMessages = @()
     
@@ -202,19 +206,29 @@ function Send-EmailsToCISA {
 
     $i=1
     ForEach ($Message in $QurantineMessagesToReport) {
-        
-        try {
+    
+        ##If using our own token (only AppAuthSecret) and within 5 minutes of token expiration, disconnect and get a new one.
+        if ($PSCmdlet.ParameterSetName -eq "AppAuthSecret"){
+            if ( $Script:EXOTokenExpirationTime -ge (Get-Date).AddMinutes(-5) -or 
+                $Script:GraphTokenExpirationTime -ge (Get-Date).AddMinutes(-5)) {
 
-            $Zip = ConvertTo-EncryptedZip -Message $Message
+                Disconnect-MgGraph | Out-Null
+                Disconnect-ExchangeOnline -Confirm $false | Out-Null
 
-            $params = @{
-                Message = @{
-                    Subject = "M-21-31 Federal phishing email submission"
-                    Body = @{
-                        ContentType = "Text"
-                        Content = "This phishing email is reported as required by M-21-31. This zip is encrypted with the password from CISA's M-21-31 phishing reporting script (version $Version)."
+                Connect-Microsoft365
+            }
+         }
+
+        $Zip = ConvertTo-EncryptedZip -Message $Message
+
+        $params = @{
+            Message = @{
+            Subject = "M-21-31 Federal phishing email submission"
+            Body = @{
+                    ContentType = "Text"
+                    Content = "This phishing email is reported as required by M-21-31. This zip is encrypted, using 7zip, with the password from CISA's M-21-31 phishing reporting script (version $Version)."
                     }
-                    ToRecipients = @(
+                   ToRecipients = @(
                         @{
                             EmailAddress = @{
                                 Address = $RecipientUPN
@@ -231,32 +245,19 @@ function Send-EmailsToCISA {
                     )
                 }
             }
-        }
 
-        catch {
-            Write-Error $_
-        }
-
-        try {
-            Send-MgUserMail -UserId $SenderUPN -BodyParameter $params -ErrorAction Stop
+        Send-MgUserMail -UserId $SenderUPN -BodyParameter $params -ErrorAction Stop
             
-            Remove-Item -Path $Zip.FilePath.PSPath 
+        Remove-Item -Path $Zip.FilePath.PSPath 
 
-            $Message.Identity | Out-File -FilePath $LogFilePath -Append
+        $Message.Identity | Out-File -FilePath $LogFilePath -Append
 
-            $Status = "Sent " + $i + " of " + $QurantineMessagesToReport.Count
-            Write-Host $Status
-            $i++
+        $Status = "Sent " + $i + " of " + $QurantineMessagesToReport.Count
+        Write-Host $Status
+        $i++
 
-            #EXO has a 30 messages/min rate limit on sent mail. This ensures we stay under it. 
-            Start-Sleep -Seconds 3
-        }
-
-        catch {
-            Write-Error $_
-        }
-
-        
+        #EXO has a 30 messages/min rate limit on sent mail. This ensures we stay under it. 
+        Start-Sleep -Seconds 2.2
     }
 }
 

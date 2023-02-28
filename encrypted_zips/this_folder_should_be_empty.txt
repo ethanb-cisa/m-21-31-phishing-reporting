@@ -1,3 +1,5 @@
 This folder temporarily holds the encrypted zip files before they're sent to CISA. They're deleted after being sent.
 
 If you interrupt the script, you may have files remaining here. You can delete them.
+
+Use 7zip if you want to open them.
