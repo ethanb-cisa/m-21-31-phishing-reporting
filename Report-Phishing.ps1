@@ -2,11 +2,15 @@ param (
     [DateTime]
     $DateToReport = (Get-Date),
 
-    [Parameter(Mandatory = $true)] 
+    [Parameter(Mandatory = $true, ParameterSetName = "UserAuth")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")] 
     [MailAddress]
     $SenderUPN,
     
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, ParameterSetName = "UserAuth")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")] 
     [MailAddress]
     $RecipientUPN,
 
