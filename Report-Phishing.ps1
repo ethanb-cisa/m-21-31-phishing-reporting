@@ -33,6 +33,9 @@ param (
     $ClientSecret
 )
 
+#Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
+#Requires -Modules @{ ModuleName="Microsoft.Graph.Users.Actionss"; ModuleVersion="1.21.0" }
+
 $Version = "0.1.0"
 
 $LogFileName = "log-ReportedPhishing-" + $DateToReport.ToString("yyyy-MM-dd")
@@ -188,7 +191,7 @@ function ConvertTo-EncryptedZip {
         $Message
     )
 
-    $FullMessage = Export-QuarantineMessage -Identity $Message.Identity
+    $FullMessage = Export-QuarantineMessage -Identity $Message.Identity -ErrorAction Stop
     $B64DecodedEML = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($FullMessage.eml))
 
     $ZipFilePath = $PSScriptRoot + "\encrypted_zips\" + $Message.Identity.Replace("\","_") + ".zip" 
