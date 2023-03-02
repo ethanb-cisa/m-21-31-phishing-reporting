@@ -34,7 +34,7 @@ param (
 )
 
 #Requires -Modules @{ ModuleName="ExchangeOnlineManagement"; ModuleVersion="3.0.0" }
-#Requires -Modules @{ ModuleName="Microsoft.Graph.Users.Actionss"; ModuleVersion="1.21.0" }
+#Requires -Modules @{ ModuleName="Microsoft.Graph.Users.Actions"; ModuleVersion="1.21.0" }
 
 $Version = "0.1.0"
 
