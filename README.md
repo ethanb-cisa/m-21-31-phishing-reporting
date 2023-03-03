@@ -65,9 +65,9 @@ Download this repository.
 .\Report-Phishing.ps1 -DateToReport "2023-01-01" -SenderUPN "bob@agency.gov" -RecipientUPN "federal.phishing.report@us-cert.gov"
 ```
 
-### Example 3: Report emails from current day with application
+### Example 3: Report emails from current day with application certificate
 ```PowerShell
-.\Report-Phishing.ps1 -SenderUPN "bob@agency.gov" -RecipientUPN "federal.phishing.report@us-cert.gov" -AppId <AppId> -CertificateThumb <CertificateThumbprint> -EXOOrganization <Agency Microsoft domain>
+.\Report-Phishing.ps1 -SenderUPN "bob@agency.gov" -RecipientUPN "federal.phishing.report@us-cert.gov" -AppId <AppId> -CertificateThumb <CertificateThumbprint>
 ```
 
 ## Parameters
@@ -114,17 +114,6 @@ The day to search for quarantined phishing emails. Includes the entire day in lo
 | Mandatory     | No          |
 | Default Value | Current day |
 | ParameterSet  | All         |
-
-### ***-EXOOrganization***
-
-One of the domains associated with the agency's tenant. For example: `usdhs.onmicrosoft.com` or `cisa.dhs.gov`. Required when application authentication is used.
-
-|           |     |
-|---------------|---------|
-| Type          | String  |
-| Mandatory     | No      |
-| Default Value | None    |
-| ParameterSet  | AppAuthCert and AppAuthSecret |
 
 ### ***-RecipientUPN***
 

@@ -23,11 +23,6 @@ param (
     [string]
     $CertificateThumb,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthCert")]
-    [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")]
-    [string]
-    $EXOOrganization,
-
     [Parameter(Mandatory = $true, ParameterSetName = "AppAuthSecret")]
     [string]
     $ClientSecret
@@ -43,6 +38,7 @@ $LogFilePathPart = Join-Path -path $PSScriptRoot -ChildPath "logs"
 $LogFilePath = Join-Path -Path $LogFilePathPart -ChildPath $LogFileName
 $Script:EXOTokenExpirationTime = ""
 $Script:GraphTokenExpirationTime = ""
+$TenantDomain = $SenderUPN.Host
 
 #################
 #DRAFT DO NOT USE
@@ -50,59 +46,82 @@ $Script:GraphTokenExpirationTime = ""
 
 function Connect-Microsoft365 {
     
-    if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.TokenStatus -eq "Active"}) ) {
-        if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
-            Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $EXOOrganization
+    ##
+    ##Connect EXO
+    ##
+
+    #Client secret requires us to disconnect and get a new token
+    if ( $PSCmdlet.ParameterSetName -eq "AppAuthSecret" ) {
+
+        Disconnect-ExchangeOnline -Confirm:$false
+
+        $URL = "https://login.microsoftonline.com/$TenantDomain/oauth2/v2.0/token"
+
+        $Body = "grant_type=client_credentials& `
+                client_id=$AppId& `
+                client_secret=$ClientSecret& `
+                scope=https%3A%2F%2Foutlook.office365.com%2F.default"
+
+        $Headers = @{
+            "Content-Type" = "application/x-www-form-urlencoded"
         }
-        elseif ($PSCmdlet.ParameterSetName -eq "AppAuthSecret") {
-            $URL = "https://login.microsoftonline.com/$EXOOrganization/oauth2/v2.0/token"
 
-            $Body = "grant_type=client_credentials& `
-                    client_id=$AppId& `
-                    client_secret=$ClientSecret& `
-                    scope=https%3A%2F%2Foutlook.office365.com%2F.default"
+        $EXOToken= (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
 
-            $Headers = @{
-                "Content-Type" = "application/x-www-form-urlencoded"
+        Connect-ExchangeOnline -AccessToken $EXOToken.access_token -Organization $TenantDomain
+
+        $Script:EXOTokenExpirationTime = (Get-Date).AddSeconds($EXOToken.expires_in)
+    }
+
+    ## Cert and User logins should manage their tokens automatically? Hopefully?
+    else {
+        if ( -not (Get-ConnectionInformation | Where-Object {$_.ConnectionUri -eq "https://outlook.office365.com" -and $_.TokenStatus -eq "Active"}) ) {     
+            if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
+
+                Connect-ExchangeOnline -CertificateThumbprint $CertificateThumb -AppId $AppId -Organization $TenantDomain
             }
+            else {
 
-            $EXOToken= (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
-
-            Connect-ExchangeOnline -AccessToken $EXOToken.access_token -Organization $EXOOrganization
-
-            $Script:EXOTokenExpirationTime = (Get-Date).AddSeconds($EXOToken.expires_in)
-        }
-        else {
-            Connect-ExchangeOnline -UserPrincipalName $SenderUPN        
+                Connect-ExchangeOnline -UserPrincipalName $SenderUPN
+            }    
         }
     }
 
-    if ("Mail.Send" -notin (Get-MgContext).Scopes) {
-       if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
-            Connect-MgGraph -TenantId $EXOOrganization -CertificateThumbprint $CertificateThumb -ClientId $AppId | Out-Null
-       }
-       elseif ($PSCmdlet.ParameterSetName -eq "AppAuthSecret") {
+    ##
+    ##Connect Graph
+    ##
 
-            $URL = "https://login.microsoftonline.com/$EXOOrganization/oauth2/v2.0/token"
+    if ( $PSCmdlet.ParameterSetName -eq "AppAuthSecret" ) {
+        
+        Disconnect-Graph | Out-Null
 
-            $Body = "grant_type=client_credentials& `
-                     client_id=$AppId& `
-                     client_secret=$ClientSecret& `
-                     scope=https%3A%2F%2Fgraph.microsoft.com%2F.default"
+        $URL = "https://login.microsoftonline.com/$TenantDomain/oauth2/v2.0/token"
 
-            $Headers = @{
-                "Content-Type" = "application/x-www-form-urlencoded"
+        $Body = "grant_type=client_credentials& `
+                client_id=$AppId& `
+                client_secret=$ClientSecret& `
+                scope=https%3A%2F%2Fgraph.microsoft.com%2F.default"
+
+        $Headers = @{
+            "Content-Type" = "application/x-www-form-urlencoded"
+        }
+
+        $GraphToken = (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
+
+        Connect-MgGraph -AccessToken $GraphToken.access_token
+
+        $Script:GraphTokenExpirationTime = (Get-Date).AddSeconds($GraphToken.expires_in)
+    }
+    else {
+        if ("Mail.Send" -notin (Get-MgContext).Scopes) {
+            if ($PSCmdlet.ParameterSetName -eq "AppAuthCert") {
+                
+                Connect-MgGraph -TenantId $TenantDomain -CertificateThumbprint $CertificateThumb -ClientId $AppId | Out-Null
             }
 
-            $GraphToken = (Invoke-WebRequest -Uri $URL -Headers $Headers -Method "POST" -Body $Body | ConvertFrom-Json)
-
-            Connect-MgGraph -AccessToken $GraphToken.access_token
-
-            $Script:GraphTokenExpirationTime = (Get-Date).AddSeconds($GraphToken.expires_in)
-
-        }
-        else {
-            Connect-MgGraph -Scopes Mail.Send | Out-Null
+            else {
+                Connect-MgGraph -Scopes Mail.Send | Out-Null
+            }
         }
     }
 }
@@ -216,13 +235,12 @@ function Send-EmailsToCISA {
     
         ##If using our own token (only AppAuthSecret) and within 5 minutes of token expiration, disconnect and get a new one.
         if ($PSCmdlet.ParameterSetName -eq "AppAuthSecret"){
-            if ( $Script:EXOTokenExpirationTime -ge (Get-Date).AddMinutes(-5) -or 
-                $Script:GraphTokenExpirationTime -ge (Get-Date).AddMinutes(-5)) {
 
-                Disconnect-MgGraph | Out-Null
-                Disconnect-ExchangeOnline -Confirm $false | Out-Null
-
-                Connect-Microsoft365
+            $Now = (Get-Date)
+            if ( ($Script:EXOTokenExpirationTime - $Now).TotalMinutes -le 5 -or 
+                 ($Script:GraphTokenExpirationTime - $Now).TotalMinutes -le 5 ) {
+                    
+                    Connect-Microsoft365
             }
          }
 
