@@ -93,7 +93,7 @@ function Connect-Microsoft365 {
 
     if ( $PSCmdlet.ParameterSetName -eq "AppAuthSecret" ) {
         
-        Disconnect-Graph | Out-Null
+        Disconnect-MgGraph | Out-Null
 
         $URL = "https://login.microsoftonline.com/$TenantDomain/oauth2/v2.0/token"
 

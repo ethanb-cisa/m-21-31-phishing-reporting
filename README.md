@@ -25,7 +25,7 @@ This PowerShell script automates reporting of phishing emails detected by Micros
 
 The user needs:
 - `Security Admin` or higher to download the emails
-- An Exchange mailbox to send the emails.
+- An Exchange mailbox to send the emails
 
 The Microsoft Graph PowerShell application needs:
 - Delegated permission `Mail.Send` in Microsoft Graph
@@ -37,6 +37,7 @@ In this method, the script authenticates and send emails as the user specified i
 The executing application needs:
 - Application permission `Exchange.ManageAsApp` in Office 365 Exchange Online
 - Application permission `Mail.Send` in Microsoft Graph
+- `Security Admin` or higher to download the emails
 
 In this method, the script sends emails as the user specified in `SenderUPN`. The application is used for authentication.
 
